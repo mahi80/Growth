@@ -7,6 +7,13 @@ inverted for sell-side intent, and a small model that ranks accounts worth a pho
 > **Status:** plan / pre-code. The repo is the working home for this build.
 > **Owner:** @mahi80
 
+## Walkthrough
+
+A five-minute narrated tour of the plan below: the sell-side inversion, the nine-stage pipeline,
+the hypotheses that gate them, the validity gate, the extraction tier and the agent control plane.
+
+https://github.com/user-attachments/assets/ddb873da-faf7-446d-acb5-6b28573bbd5c
+
 ---
 
 ## 1. The thesis (read this before writing code)
