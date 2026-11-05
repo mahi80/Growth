@@ -9,10 +9,11 @@ inverted for sell-side intent, and a small model that ranks accounts worth a pho
 
 ## Walkthrough
 
-A five-minute narrated tour of the plan below: the sell-side inversion, the nine-stage pipeline,
-the hypotheses that gate them, the validity gate, the extraction tier and the agent control plane.
+A six-minute narrated tour of the plan below: the sell-side inversion, the nine-stage pipeline, the
+signals and hypotheses that gate them, how people and headcount movement is observed, the validity
+gate, the extraction tier and the agent control plane.
 
-https://github.com/user-attachments/assets/ddb873da-faf7-446d-acb5-6b28573bbd5c
+https://github.com/user-attachments/assets/a11a4d45-e953-4b00-a382-9b564c7d52f8
 
 ---
 
