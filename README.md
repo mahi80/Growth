@@ -718,6 +718,9 @@ history and banker announcements), with `acquired` and `acqui-hire` as weaker la
 T−18, T−12, T−6 and T−3.
 **Plan, endpoints and week-by-week:** [docs/phase0-us-data-sources.md](docs/phase0-us-data-sources.md)
 (US-only).
+**Pre-code review:** [docs/pre-code-gaps.md](docs/pre-code-gaps.md) — control design, label rights,
+MNPI exposure, verification sampling and serving decisions that must close before labels are
+assembled.
 **Working artifacts:** [labels.csv](evals/phase0/labels.csv),
 [sources.md](evals/phase0/sources.md), `features.parquet`, `lift.md`, `decision.md`.
 **Exit:** a lift table showing at least three detector families with ≥2× hazard over base rate, a
@@ -828,6 +831,9 @@ the universe definition changes, since that silently changes the base rate.
 ---
 
 ## 13. Open decisions
+
+The pre-code review lists the decisions below with their blast radius and a week-one action:
+[docs/pre-code-gaps.md](docs/pre-code-gaps.md).
 
 - [ ] **Consumer fork:** are these leads sold to *acquirers* (find sellers before they run a
       process), or used by *X's own sell-side advisory* (source mandates)? The signal layer
