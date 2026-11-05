@@ -733,9 +733,9 @@ assembled.
 [sources.md](evals/phase0/sources.md), `features.parquet`, `lift.md`, `decision.md`.
 **Exit:** a lift table showing at least three detector families with ≥2× hazard over base rate, a
 median lead time above 9 months, and ≥70% of exits with three feature families reconstructable at
-T−12. Also report `missed_exit_rate@T−12` with every miss classified as uncaptured, undetected,
-suppressed or unforecastable (§9.1 of the phase 0 doc). If the lift gate fails, rewrite the thesis,
-do not start phase 1.
+T−12. Also report `missed_exit_rate_fired@T−12` and `coverage@T−12`, with every miss classified as
+uncaptured, captured-but-undetected, detected-but-not-served or no observable precursor (§9.1 of the
+phase 0 doc). If the lift gate fails, rewrite the thesis, do not start phase 1.
 
 ### Phase 1 — 5k companies, done properly (weeks 2–5)
 Universe definition and the first 5k tier-1 companies. Collectors for GitHub/ATS/filings/charges.
@@ -764,10 +764,11 @@ adapter behind the router.
 Gradient-boosted ranker on the phase-1/2 features, trained on the backtest set and the growing
 verification log. Anti-signals wired in as negative features. Per-pack intercepts and slot
 allocation by measured precision (§6.6). Verification queue wired into the internal UI from day one
-of this phase. Quarterly **backcast**: sample the exits where no detector fired, write the why-now
-narrative from post-close sources, classify the miss, and route it to source discovery, the
-hypothesis backlog or calibration (phase 0 doc §9.2). "Why this lead" explanation generated from
-evidence facts, not from the LLM's imagination.
+of this phase. Quarterly **backcast**: compute fired/served miss rates on the full mature cohort,
+then blind-classify a stratified sample of misses before anyone writes the post-close narrative;
+route each class to source discovery, the hypothesis backlog or calibration, and publish beside the
+quarter's precision@50 (phase 0 doc §9.2). "Why this lead" explanation generated from evidence
+facts, not from the LLM's imagination.
 **Exit:** precision@50 on analyst-verified accounts beats the rule baseline by a measurable margin;
 top decile lift ≥5× base rate within each pack; every shortlisted account has at least two
 independent evidence classes.
@@ -799,7 +800,7 @@ misses the other 90%, so lift and coverage are tracked as separate numbers.
 | Top-decile lift over base rate (backtest) | ≥5× |
 | Precision@50 on analyst-verified accounts | ≥20% |
 | Median lead time, first signal → process start | ≥9 months |
-| `missed_exit_rate@T−12`, known processes | ≤0.40 (recall ≥0.60) |
+| `missed_exit_rate_served@T−12`, known processes | ≤0.40 (recall ≥0.60); `fired` and `coverage` reported separately |
 | Misses classified and owned, per quarterly backcast | 100% |
 | Share of shortlisted accounts with ≥2 evidence classes | ≥80% |
 | Extraction field F1 | ≥0.90 on golden set |

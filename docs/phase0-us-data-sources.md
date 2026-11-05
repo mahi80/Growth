@@ -33,7 +33,7 @@ If phase 0 fails, we have spent two weeks instead of two quarters.
 | `sources.md` | Source scorecard (§10) filled for every candidate | ≥15 sources scored, ≥8 reachable without payment |
 | `features.parquet` | Per-company features at T−18 / −12 / −6 / −3 | ≥70% of exits have ≥3 feature families at T−12 |
 | `lift.md` | Hazard ratios for H1–H6 with CIs | ≥3 detector families at HR ≥2, CI lower bound >1 |
-| `evals/backcast/YYYY-QN.md` | First missed-exit audit (§9.2) | Every silent exit classified, owned and actioned |
+| `evals/backcast/YYYY-QN.md` | First missed-exit audit (§9.2) | Every sampled missed exit classified; every action owned and dated |
 | `decision.md` | Go/no-go, licensed-source shortlist, pack priority | Signed by whoever owns the P&L |
 
 The phase-0 deliverables land in `evals/phase0/`. The backcast series lives in `evals/backcast/` and
@@ -274,42 +274,83 @@ H4 corp-dev or CFO hire, H5 runway <9 months, H6 two or more decay signals simul
 
 ### 9.1 Recall, not just lift
 
+Two rates, because a rule that never fired and a rule that fired but was not served are different
+failures:
+
 ```
-missed_exit_rate(w) = exits with no detector active at T−w
-                      / exits with at least one detector-reconstructable feature family at T−w
+missed_exit_rate_fired(w)  = in-universe exits with no detector firing at T−w
+                             / in-universe exits with a reconstructable feature family at T−w
+missed_exit_rate_served(w) = in-universe exits that would not have entered the shortlist at T−w
+                             / in-universe exits with a reconstructable feature family at T−w
+coverage(w)                = in-universe exits with a reconstructable feature family
+                             / all in-universe exits
 ```
 
+- `fired` is pre-threshold; `served` applies the ranking and slot budget in force at T−w. Report
+  both. A ranker or threshold change must not masquerade as a detector change.
+- `fired` counts any detector that met its own threshold, right or wrong. It measures event-level
+  recall, not attribution; per-detector precision belongs in `lift.md`.
+- The denominator is in-universe exits with at least one reconstructable feature family. Report
+  `coverage` beside the rate so the excluded mass is visible rather than hidden inside the metric.
+- Exits outside the served universe are reported separately. No detector can fire on a company that
+  was never collected, so they are a universe decision, not a detector defect.
 - Report at T−12 and T−6. A family with HR ≥ 2 can still miss most exits if it is rare; lift and
   coverage are separate numbers and both belong in `lift.md`.
-- The denominator excludes exits we cannot observe. Including them turns the metric into a coverage
-  measurement and hides detector failures inside missing data.
-- README §10 sets the target at `missed_exit_rate@T−12 ≤ 0.40` for known processes (recall ≥ 0.60).
-  Set the Phase 0 target in `decision.md` after the first audit; do not tune it to the result.
-- Classify every miss, because the four classes have different owners:
+- Evaluate with the detector set that was live at T−w, and record `detector_version` plus
+  `mode = as_live | retrospective`. Applying today's rules to old exits is a useful R&D test, but it
+  is not the as-live rate and must not be blended into it.
+- README §10's target of ≤ 0.40 applies to `missed_exit_rate_served@T−12`. Phase 0 has no ranker, so
+  it gates on `fired` and sets the baseline in `decision.md`. Do not tune either after the result.
+
+Miss classes, once an exit is in-universe, observable and missed:
 
 | Class | What it means | Action |
 | --- | --- | --- |
 | **Uncaptured** | no source covered the precursor | source registry; `source_discovery` |
-| **Captured, undetected** | the feature exists, no rule fires | hypothesis backlog; backtest before promotion |
-| **Detected, suppressed** | the rule fired but scored below threshold | calibration, not new data |
-| **No observable precursor** | the exit left no public trace at T−w | exclude from the recall target; update the base rate |
+| **Captured, undetected** | the feature exists, no rule fired | hypothesis backlog; backtest before promotion |
+| **Detected, not served** | the rule fired, the ranker or slot budget excluded it | calibration, not new data |
+| **No observable precursor** | no public trace at T−w | no detector fix; report as the achievable floor |
+
+Two exclusions, reported but not counted as detector misses:
+
+| Exclusion | Meaning | Action |
+| --- | --- | --- |
+| **Outside universe** | the company was never in the served universe at T−w | universe decision |
+| **Archive too young** | T−w predates the archive | revisit next quarter; no source verdict |
+
+Do not remove "no observable precursor" exits from the rate after classifying them — that is
+post-hoc selection. Report their share so the floor is explicit.
 
 ### 9.2 Quarterly backcast
 
-The audit above is not a one-off. Run it every quarter, starting at the end of Phase 0.
+Run it every quarter, starting at the end of Phase 0. The ritual classifies misses; the rates are
+computed on the full mature cohort, never on the sample.
 
-1. Take the cohort that announced **6–15 months ago**: T−6 is observable and the label has settled.
-   T−12 is reconstructed from the archive; if it cannot be, the exit is classified uncaptured, not
-   dropped.
-2. Select every exit with no detector active at T−12. If there are more than 30, sample 30 plus every
-   exit above the 90th percentile by last round size (or consideration where disclosed).
-3. Write the why-now narrative from post-close sources — 8-K, acquirer statement, press, founder
-   post — before looking at our own features.
-4. Ask what was observable at T−12 **in the archive**, not what exists today. A precursor that was
-   never captured is a data gap, not a detector failure.
-5. Classify each miss with the table in §9.1, assign an owner, and open the action.
-6. Publish `evals/backcast/YYYY-QN.md` with counts, the updated `missed_exit_rate`, and the three
-   largest miss classes; feed them to source discovery, the hypothesis backlog or calibration.
+1. Cohort: exits whose outcome is final (closed or terminated) with `announced_at` 6–15 months before
+   the audit. T−6 must be inside the archive. Audit T−12 where the archive reaches it; otherwise
+   record `archive too young` for that window rather than calling it uncaptured. Pending deals are
+   excluded until they close or terminate.
+2. Compute both rates and `coverage` on every in-universe exit in the cohort. No sampling for the
+   numbers.
+3. For classification, take every missed exit if there are ≤30; otherwise a stratified sample of 30
+   by pack × size band, plus every exit above the 90th percentile by last round size (or
+   consideration where disclosed).
+4. Blind classification. Two coders independently label each sampled exit from the T−w archive alone,
+   before seeing the why-now narrative. A separate analyst writes that narrative from post-close
+   sources — 8-K, acquirer statement, press, founder post. Adjudicate disagreements and record the
+   adjudication. Report raw agreement alongside Cohen's κ, because κ collapses when one class
+   dominates the sample. A class that cannot be agreed is `unknown`, not forced.
+5. A class must rest on a dated, rule-checkable observation in the archive. "The narrative makes
+   sense of this signal" is not evidence; hindsight will manufacture a precursor out of ordinary
+   noise.
+6. Reconcile the cohort against deals announced since the last audit, so a missing label is not
+   counted as a missed detector.
+7. Pair the audit with the quarter's precision@50. A lower miss rate bought by firing more rules is
+   not progress; precision is the other half of the trade.
+8. Publish `evals/backcast/YYYY-QN.md` with the rates, `coverage`, the class counts, the three largest
+   classes, agreement and κ. Report class shares reweighted back to the cohort: the stratified sample
+   and the 90th-percentile round overstate their strata if raw counts are quoted. Every action gets
+   an owner and a due date; last quarter's actions are reviewed before new ones are opened.
 
 Report the rate; do not chase it to zero. Some exits are genuinely unforecastable, and a team that
 optimises this metric will start fitting noise.
@@ -365,7 +406,7 @@ of how interesting it looks.
 | --- | --- |
 | 6 | USPTO, openFDA/ClinicalTrials, FedRAMP; WARN for the 10 largest states |
 | 7 | Compute `features.parquet` at all four windows; log reconstruction decisions |
-| 8 | Lift table for H1–H6; first `missed_exit_rate@T−12` audit with misses classified; quantify survivorship and label bias |
+| 8 | Lift table for H1–H6; first `missed_exit_rate_fired@T−12` audit with misses classified; quantify survivorship and label bias |
 | 9 | Source scorecard; licence shortlist with indicative pricing |
 | 10 | `decision.md`: go/no-go, pack order, phase-1 source list |
 
@@ -384,8 +425,10 @@ If two or more fail: rewrite the thesis before writing a crawler. A pipeline bui
 does not exist is the most expensive possible outcome, and phase 0 is the only cheap place to find
 that out.
 
-Also report `missed_exit_rate@T−12` and the miss-class breakdown from §9.1. It does not block phase 1
-on its own — phase 1 adds sources that may close uncaptured misses — but a rate above the target set
+Also report `missed_exit_rate_fired@T−12`, `coverage@T−12` and the miss-class breakdown from §9.1
+(uncaptured, captured-but-undetected, detected-but-not-served, no observable precursor). It does not
+block phase 1 on its own — phase 1 adds sources that may close uncaptured misses — but a rate above
+the target set
 in `decision.md` makes the detector set incomplete by definition, and the largest miss class becomes a
 phase-1 work item rather than a later surprise.
 
