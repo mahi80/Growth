@@ -134,8 +134,9 @@ adds an inverted signal layer and deliberately narrows the universe to companies
         └────────────────────────┬─────────────────────────┘
                                  │
    ┌─────────────────────────────▼────────────────────────────────┐
-   │  STORE   Postgres (entities, edges, facts, events, provenance)│
-   │          pgvector/Qdrant (embeddings) · OpenSearch (facets)  │
+   │  STORE   Postgres: entity, fact, event, signal, score, label  │
+   │          provenance · pgvector in same DB (phase 4) · raw HTML│
+   │          fixtures in object store · OpenSearch only if needed │
    └─────────────────────────────┬────────────────────────────────┘
                                  │
         ┌────────────────────────▼─────────────────────────┐
@@ -168,6 +169,24 @@ extraction escalation, company investigation and ontology proposals; they write 
 tables, and deterministic workers keep the throughput. Stage ownership, graph state schemas and the
 template → probe → agent cascade are in
 [docs/agent-control-plane.md](docs/agent-control-plane.md).
+
+### 3.1 Runtime, storage and the harness
+
+The pipeline is Postgres-centred on purpose: the product is joins — fact → event → signal → score
+→ verification — and the backtest is a SQL query. One Postgres cluster holds the system of record,
+`pgvector` embeddings, the LangGraph checkpoint schema and the `proposed_*` staging tables, so a
+promotion is a single transaction. Cosmos DB is rejected as the primary store: its document model
+pushes those joins into application code, and RU pricing punishes the full-cohort scans that phase 0
+and the quarterly backcast depend on. Decision record, sizing triggers and environments:
+[docs/infra-platform.md](docs/infra-platform.md).
+
+LangGraph graphs live in `src/growth/agents/`. They run on the Postgres checkpointer, call models
+only through the gateway in `src/growth/llm/`, and are evaluated per graph, not as one blended
+number. The **harness** is a component, not a test folder: `evals/harness/` owns the runner, metric
+implementations and the CI regression gate; `evals/golden/` holds per-extractor and per-graph golden
+sets with fixtures; `evals/phase0/` and `evals/backcast/` hold the artefacts defined in
+[docs/phase0-us-data-sources.md](docs/phase0-us-data-sources.md). `tests/` proves the code is
+correct; `evals/` proves the output is good.
 
 ---
 
@@ -795,6 +814,11 @@ implies roughly a 10× lift, so target accordingly and measure against the base 
 zero. Recall is the other half of the P&L: a precise detector that fires on 10% of exits still
 misses the other 90%, so lift and coverage are tracked as separate numbers.
 
+The runner, metric implementations and the regression gate live in `evals/harness/`; golden sets and
+backtest fixtures sit beside it and are versioned with the extractor and prompt contracts they
+measure. A prompt or model change reruns its graph's golden set and the ranking eval, not the whole
+suite.
+
 | Metric | Target |
 | --- | --- |
 | Top-decile lift over base rate (backtest) | ≥5× |
@@ -863,7 +887,10 @@ The pre-code review lists the decisions below with their blast radius and a week
 - [ ] Who owns the verification queue in X, and at what cadence? Phase 1 assumes ~100
       accounts/week.
 - [ ] Hosted inference vs self-hosted small models for extraction — decide by phase 2 cost data.
-- [ ] Vector store: pgvector (simpler) vs Qdrant (scale headroom).
+- [x] Vector store: Postgres + pgvector in the primary cluster; Cosmos DB rejected as the primary
+      store. Revisit Qdrant only on the triggers in [docs/infra-platform.md](docs/infra-platform.md).
+- [ ] Managed Postgres provider and region (RDS / Cloud SQL / Neon) — decide on residency, PITR and
+      egress before phase 1.
 
 ---
 
@@ -872,21 +899,33 @@ The pre-code review lists the decisions below with their blast radius and a week
 ```
 growth/
 ├── README.md
-├── docs/            # this plan, ADRs, source policy, event + label dictionary
-├── packs/           # vertical packs (YAML) + fixtures, one directory per pack
-├── ontology/        # X seed + SHACL shapes for the RDF export
+├── docs/                 # plan, ADRs, source policy, event + label dictionary
+├── packs/                # vertical packs (YAML) + fixtures, one directory per pack
+├── ontology/             # X seed + SHACL shapes for the RDF export
 ├── src/growth/
-│   ├── registry/    # source registry, robots/ToS gate, yield monitor
-│   ├── crawl/       # queue, fetchers, change detection
-│   ├── delta/       # per-company baselines, change events
-│   ├── extract/     # readability, chunking, schema-constrained LLM
-│   ├── resolve/     # entity resolution, merge rules
-│   ├── signals/     # runway, decay, process-leak, distress detectors
-│   ├── score/       # propensity + deal_fit ranker
-│   ├── serve/       # API, briefs, verification queue
-│   └── db/          # models, migrations
-├── evals/           # golden sets, backtest harness, nightly eval
-│   └── phase0/      # labels.csv, sources.md, lift.md, decision.md
-├── infra/           # docker-compose, deploy
-└── tests/
+│   ├── registry/         # source registry, robots/ToS gate, yield monitor
+│   ├── crawl/            # queue, fetchers, change detection
+│   ├── delta/            # per-company baselines, change events
+│   ├── extract/          # readability, chunking, schema-constrained LLM
+│   ├── resolve/          # entity resolution, merge rules
+│   ├── signals/          # runway, decay, process-leak, distress detectors
+│   ├── score/            # propensity + deal_fit ranker
+│   ├── serve/            # API, briefs, verification queue
+│   ├── agents/           # LangGraph: source_discovery, collector_repair,
+│   │                     # extraction_escalation, company_investigation,
+│   │                     # ontology_proposal, signal_hypothesis
+│   ├── llm/              # SLM gateway client, router policy, prompt/schema registry
+│   ├── ontology/         # loader, GraphBuilder checks, SHACL export
+│   └── db/               # models, migrations, checkpointer schema
+├── evals/
+│   ├── harness/          # runner, metrics, CI regression gate
+│   ├── golden/           # extractor + per-graph golden sets and fixtures
+│   ├── backtest/         # lift computation, reusable beyond phase 0
+│   ├── backcast/         # quarterly miss audits (YYYY-QN.md)
+│   └── phase0/           # labels.csv, sources.md, lift.md, decision.md
+├── infra/
+│   ├── compose/          # local: postgres+pgvector, minio, api, worker
+│   ├── deploy/           # VM + managed Postgres first; k8s only if needed
+│   └── obs/              # OTel collector, dashboards, alert rules
+└── tests/                # unit + integration; proves correctness, not quality
 ```

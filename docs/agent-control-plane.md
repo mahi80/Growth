@@ -179,7 +179,8 @@ separate human-authored change.
 
 LangGraph gives you the graph, the checkpointer and interrupts. Everything below is yours.
 
-- **Durable state.** Postgres checkpointer, `thread_id` = deterministic key
+- **Durable state.** Postgres checkpointer in the `agent` schema of the primary cluster
+  ([infra-platform.md](infra-platform.md) §3), `thread_id` = deterministic key
   (`source_discovery:{company_id}:{run_date}`). That makes a re-run idempotent and gives you replay.
 - **Budgets in code, not prompts.** Wrap every model/tool call in a guard that decrements a token and
   call budget. On exhaustion, return `partial` with what was verified. A prompt-level instruction is
