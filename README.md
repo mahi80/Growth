@@ -1,4 +1,4 @@
-# Growth — Sell-Side Deal Intelligence 
+# X — Sell-Side Deal Intelligence 
 
 A build plan for a company-intelligence engine that surfaces **technical startups preparing to
 sell** — a continuously refreshed company graph, a typed signal layer whose polarity is
@@ -50,7 +50,7 @@ Three consequences for us:
 X product line sells off-market M&A targets. For the sell-side motion the lead is a
 **technical startup with a credible reason to exit**, found *before* it engages a banker.
 Every priority below is set by "does this shorten the time between a company becoming available
-and a GrowthPal rep being on the phone with it".
+and an X rep being on the phone with it".
 
 The deliverable is not a feed. It is a short account list — a few hundred per week — each with a
 "why now" brief that cites the underlying facts.
@@ -661,7 +661,7 @@ company rather than raw page volume.
 
 ## 8. Crawling policy and legal guardrails
 
-Non-negotiable, because GrowthPal's buyers are regulated acquirers and will ask about provenance.
+Non-negotiable, because X's buyers are regulated acquirers and will ask about provenance.
 
 - **Source registry is the gate.** A domain is crawled only after robots.txt is parsed, the ToS
   note is recorded, and a licence/provenance class is set (`open` | `api` | `restricted` | `blocked`).
@@ -695,7 +695,7 @@ pipeline can produce a year of nothing. Each phase has an exit criterion; do not
 before it's met.
 
 ### Phase 0 — Prove the signal before building it (week 1)
-Define the event precisely: `process_started` (banker retained / LOI signed, from GrowthPal's own
+Define the event precisely: `process_started` (banker retained / LOI signed, from X's own
 history and banker announcements), with `acquired` and `acqui-hire` as weaker labels. Reconstruct
 300–500 exits from 2019–2025 plus 2,000 matched controls. Compute the §5.5 hypotheses at
 T−18, T−12, T−6 and T−3.
@@ -810,7 +810,7 @@ the universe definition changes, since that silently changes the base rate.
 ## 13. Open decisions
 
 - [ ] **Consumer fork:** are these leads sold to *acquirers* (find sellers before they run a
-      process), or used by *GrowthPal's own sell-side advisory* (source mandates)? The signal layer
+      process), or used by *X's own sell-side advisory* (source mandates)? The signal layer
       is shared; `deal_fit` optimises for target-acquirer match versus fee size and willingness to
       engage. This decides the ranker's second term and should be settled before phase 3.
 - [ ] Geography for v1: India-only to keep the filings advantage, or India + US from the start?
@@ -819,7 +819,7 @@ the universe definition changes, since that silently changes the base rate.
       review? This gates the L1→L2 cold-start step and is the main per-pack setup cost.
 - [ ] Buy licensed people data and secondary-market listings, or leave the explicit-intent class
       out of v1? (Cheapest v1 is filings + technical decay only.)
-- [ ] Who owns the verification queue in GrowthPal, and at what cadence? Phase 1 assumes ~100
+- [ ] Who owns the verification queue in X, and at what cadence? Phase 1 assumes ~100
       accounts/week.
 - [ ] Hosted inference vs self-hosted small models for extraction — decide by phase 2 cost data.
 - [ ] Vector store: pgvector (simpler) vs Qdrant (scale headroom).
@@ -833,7 +833,7 @@ growth/
 ├── README.md
 ├── docs/            # this plan, ADRs, source policy, event + label dictionary
 ├── packs/           # vertical packs (YAML) + fixtures, one directory per pack
-├── ontology/        # Growth seed + SHACL shapes for the RDF export
+├── ontology/        # X seed + SHACL shapes for the RDF export
 ├── src/growth/
 │   ├── registry/    # source registry, robots/ToS gate, yield monitor
 │   ├── crawl/       # queue, fetchers, change detection
