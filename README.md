@@ -291,7 +291,8 @@ The formal class model, R2RML mapping and export surfaces are in
 
 Sell-side intent is observable in five classes. They differ enormously in lead time and precision,
 which is why the scorer needs all five rather than optimising one. These are the **generic** layer;
-§6 covers how verticals instantiate them through counterparties and registries.
+§5.7 adds the second-order sources that make each class cheaper to detect, and §6 covers how
+verticals instantiate them through counterparties and registries.
 
 ### 5.1 Signal classes
 
@@ -374,6 +375,123 @@ Rules first, then a gradient-boosted ranker on the same features. The model's jo
 right about every company; it is to **compress 100k companies into 300 worth a call**. Report
 per-class contribution in `company_score.components` so the brief can be generated from cited
 facts rather than from model output.
+
+### 5.7 Second-order sources: entity shell, money trail, contract clock
+
+§5.2 lists what companies **publish**. The cheaper and much less crowded tier is what they **file**:
+the legal shell that gets restructured before a sale, the payroll and tax trail that dates a runway,
+and the contract dates that turn a dependency into a countdown. A fourth tier is derivative — rate
+of change and *silence* across surfaces we already poll.
+
+#### A. Entity shell — highest precision, lowest competition
+
+| Source | What it leaks | Cadence | Access |
+| --- | --- | --- | --- |
+| State SoS entity search / bulk | new holding entity, Articles of Merger, name change, status `forfeited`/`suspended`, registered-agent change | daily–weekly | free, bulk varies by state |
+| State annual reports (CA Statement of Information, FL, NV, WA) | officer and director changes without LinkedIn — the only public board list for most private companies | annual, per company | free |
+| State UCC-1 / UCC-3 | new blanket lien (venture debt, a tighter lender), assignment to a new lender, **termination on payoff** | weekly | free search, paid bulk |
+| County recorder | bulk-sale notices, assignment for benefit of creditors, tax liens, fictitious business names | weekly | free, per county |
+| Legal-notice newspapers | bulk sale, ABC, dissolution, name change — often 30–90 days before any press | daily | free–cheap |
+| USPTO assignment + security-interest records | IP pledged as collateral, or **assigned to the acquirer before announcement** | weekly | free API |
+| USPTO TSDR | trademark abandoned or not renewed — a cheap technical-decay feature | monthly | free |
+| PACER / CourtListener RECAP | bankruptcy, judgments, contract and IP suits; docket entries precede press by weeks | daily | free–$0.10/page |
+
+#### B. Money trail — dates, not adjectives
+
+| Source | What it leaks | Cadence | Access |
+| --- | --- | --- | --- |
+| DOL OFLC LCA / PERM disclosure | employer FEIN, job titles, worksites, **wage levels** — a quarterly headcount proxy and a wage-cut tell | quarterly | free bulk |
+| DOL EFAST2 Form 5500 | 401(k) participant counts (headcount), **plan termination**, **final return** — a final 5500 is a winding-down tell | annual | free, full-text |
+| Form D / D-A | rolling closes and extensions; a bridge that never prices | event | free |
+| Form ADV (IAPD) | VC fund vintage, AUM, fund count — the investor-pressure feature from §5.3 | annual | free |
+| FFIEC Call Reports + bank earnings | sponsor-bank health and partner-program disclosures | quarterly | free |
+| FinCEN MSB registry; Visa/Mastercard service-provider lists | payments authority lapse or removal — cannot process, cannot onboard | monthly | free, manual |
+| NPPES NPI registry | clinician count and deactivations for healthtech | monthly | free bulk |
+
+The **EIN join key** matters more than any single row above: LCA and Form 5500 both carry employer
+FEIN, and NPPES carries EIN. Harvesting EIN from DOL filings gives a private-company join key that
+survives name changes and DBAs — far better than fuzzy name matching.
+
+#### C. Contract clock — turning dependencies into dates
+
+| Source | What it leaks | Cadence | Access |
+| --- | --- | --- | --- |
+| USAspending / FPDS | period-of-performance end and obligation trend per vendor — a dated revenue cliff | daily | free API |
+| SAM.gov | entity registration lapse: the company can no longer be awarded or paid | weekly | free |
+| Legistar / Granicus council agendas | contract approval, renewal delay or cancellation in a public agenda before any press | daily | free API per city |
+| State procurement portals | incumbent contract expiry and recompete dates | weekly | free |
+| CMS PFS/OPPS, FDA, NIH RePORTER, SBIR | code deletion, program expiry, grant end date, trial termination | monthly | free |
+| FedRAMP, StateRAMP, trust centers, PCI AOC | authorization expiry — the product becomes unsellable to the segment | monthly | free |
+
+#### D. Distribution and technical surfaces — daily, nearly free
+
+| Source | What it leaks | Cadence | Access |
+| --- | --- | --- | --- |
+| AWS/Azure/GCP marketplaces, Salesforce AppExchange, HubSpot, Slack, Atlassian, Shopify, Epic Showroom | delisting or review freeze = distribution loss | weekly | free |
+| Statuspage JSON, LaunchNotes/Headway/Canny changelogs, ReadMe/GitBook docs, trust center | cadence and incident rate; a changelog that stops is a cheap decay signal | daily | free |
+| Meta Ad Library, Google Ads Transparency | paid demand stops while organic decays | weekly | free–medium |
+| App Store / Play review RSS | review velocity and rating trend for consumer | weekly | free |
+| Certificate Transparency (crt.sh) | **`dataroom.`, `diligence.`, `board.`, `investors.` subdomains** — a diligence environment stood up before a deal, plus cert expiry | daily | free |
+| GitHub org, npm/PyPI | repo archive or **transfer** to another org, maintainer exit, package ownership change, deprecation | daily | free |
+| deps.dev / Libraries.io, OpenSSF Scorecard | dependent counts and maintenance flags | weekly | free |
+| RDAP/WHOIS, MX/NS, registrar; BGP/ASN | domain lapse, mail migration, infrastructure withdrawal | weekly | free |
+
+The CT-log row is the cheapest process-leak detector we have: a certificate for
+`dataroom.<company>.com` is public, dated, and almost never registered by the company's own
+marketing.
+
+#### 5.7.1 The derived feature that beats any single source
+
+Surface heartbeat. For each of ~10 surfaces (releases, package publishes, ATS postings, statuspage
+incidents, changelog entries, docs diffs, ad presence, app reviews, SoS/agent updates, CT certs)
+store `last_seen_at` and a 12-week observation rate per company, then compute:
+
+```
+silence(s, w) = 1 - observations(s, last w weeks) / median(observations(s, trailing 52 weeks))
+```
+
+Aggregate into a `surface_vector` and require **two or more surfaces** plus at least one deadline
+feature before the decay class fires. Silence alone is ambiguous — teams go quiet for launches, for
+fundraising, and for death. Silence *with* a runway under 9 months is the product.
+
+Two consequences for the build:
+
+- **Start polling now.** Statuspages, ATS boards, CT logs and SoS filings have no historical
+  archive. Anything not polled in Phase 0 cannot be backtested; it can only be validated
+  prospectively. Keep raw responses from week 1, before labels exist — the cold-start archive.
+- **Store `last_nonzero_at` per source**, not just per company (§8). A source that silently returns
+  zero for a week is a broken collector, not 4,000 peaceful companies.
+
+#### 5.7.2 Buyer appetite is the other half
+
+A sell-side signal without a buyer is an alert, not a lead. The same public filings score the buy
+side: a public acquirer's 8-K 1.01 (new or upsized revolver = dry powder), 10-K language about
+acquisition strategy, goodwill impairment (a motivation to buy growth), and the sector's
+announced-deal cadence. Map banker and law-firm deal flow to sectors, then weight a company's score
+by whether an active, funded buyer exists for its dependency profile. Two otherwise identical
+companies are not equally sellable.
+
+#### 5.7.3 What I would not add
+
+- **LinkedIn, X, Reddit, Glassdoor, Indeed** — ToS exposure, personal-data weight, and the phase-0
+  evidence says the yield is worse than ATS boards. §8 already forbids LinkedIn.
+- **Traffic-estimate vendors** (Similarweb, Sensor Tower) at seed stage — the estimates are too
+  noisy below ~50k monthly visits to rank on, and per-domain cost is high.
+- **Marketplaces as a recall source.** Axial, Acquire.com, Flippa and Empire Flippers are precision
+  lanes with heavy selection bias toward small, bootstrapped, already-public sellers. Useful for
+  explicit intent; never for base rates.
+- **"Founder wants to sell" inferred from social posts** — high legal exposure, low precision, and
+  exactly the claim that gets a product like this written up badly.
+- **Broad news crawling.** GDELT plus 50 targeted RSS feeds cover the same ground for a fraction of
+  the cost.
+
+#### 5.7.4 Five additions for Phase 0
+
+Add these to the backtest feature set, in this order: (1) LCA headcount and wage trend, (2) final
+Form 5500 and plan termination, (3) entity-shell deltas (merger, new parent, forfeiture), (4) CT-log
+data-room subdomains, (5) the surface heartbeat vector. Measure each as a standalone hazard ratio
+before adding it to H6 — a source that cannot beat the base rate alone will not rescue the model in
+combination.
 
 ---
 
