@@ -281,6 +281,10 @@ create table verification (
 Edge table for person↔company, investor↔company, company↔company (competitor,
 acquired_by). Start as Postgres edges; only move to a graph DB when traversals hurt.
 
+The formal class model, R2RML mapping and export surfaces are in
+[docs/ontology-and-rdf.md](docs/ontology-and-rdf.md); the draft seed is
+[ontology/growth-seed.json](ontology/growth-seed.json).
+
 ---
 
 ## 5. The signal layer
@@ -711,6 +715,7 @@ growth/
 ├── README.md
 ├── docs/            # this plan, ADRs, source policy, event + label dictionary
 ├── packs/           # vertical packs (YAML) + fixtures, one directory per pack
+├── ontology/        # Growth seed + SHACL shapes for the RDF export
 ├── src/growth/
 │   ├── registry/    # source registry, robots/ToS gate, yield monitor
 │   ├── crawl/       # queue, fetchers, change detection
