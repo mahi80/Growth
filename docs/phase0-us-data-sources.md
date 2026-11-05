@@ -44,7 +44,7 @@ Everything lands in `evals/phase0/`. Nothing here becomes production code.
 Positive event, strongest to weakest:
 
 1. **`process_started`** — banker retained, LOI signed, or "strategic alternatives" announced.
-   Best label; scarce. Use where GrowthPal deal history or banker pages provide it.
+   Best label; scarce. Use where X deal history or banker pages provide it.
 2. **`acquired`** — control change completed. The workhorse label.
 3. **`acqui_hire`** — team + IP, no product continuity. Counts, but flag it: the pre-deal signals
    differ (usually a funding failure, not a strategic process).
