@@ -151,6 +151,10 @@ The DELTA stage is the sell-side addition. Buy-side scoring reads *state* ("this
 engineers"); sell-side scoring reads *rate of change* ("this company had 80 engineers in March and
 51 in September").
 
+The EXTRACT tier's model strategy — what to reuse from the SLM serving fabric, the grounding rule,
+and the split between frontier and fine-tuned extraction — is in
+[docs/infra-extraction-tier.md](docs/infra-extraction-tier.md).
+
 ---
 
 ## 4. Data model (first cut)
@@ -726,6 +730,9 @@ vendors). Automated dependency discovery from registry handles, and dependency p
 Internal search over companies.
 **Exit:** 50k companies live at ≤$3 per 1,000 pages; duplicate rate under 2%; freshness lag p95
 under 24h on high-signal sources and 7 days on profile fields; precision reported separately per pack.
+**Extraction tier:** [docs/infra-extraction-tier.md](docs/infra-extraction-tier.md) — stage map,
+grounding rule, and the phase 0/1/2 split for moving fields from a frontier model to a fine-tuned
+adapter behind the router.
 
 ### Phase 3 — Propensity and feedback (weeks 11–14)
 Gradient-boosted ranker on the phase-1/2 features, trained on the backtest set and the growing
