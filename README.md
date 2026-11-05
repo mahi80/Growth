@@ -733,7 +733,9 @@ assembled.
 [sources.md](evals/phase0/sources.md), `features.parquet`, `lift.md`, `decision.md`.
 **Exit:** a lift table showing at least three detector families with ≥2× hazard over base rate, a
 median lead time above 9 months, and ≥70% of exits with three feature families reconstructable at
-T−12. If this fails, rewrite the thesis, do not start phase 1.
+T−12. Also report `missed_exit_rate@T−12` with every miss classified as uncaptured, undetected,
+suppressed or unforecastable (§9.1 of the phase 0 doc). If the lift gate fails, rewrite the thesis,
+do not start phase 1.
 
 ### Phase 1 — 5k companies, done properly (weeks 2–5)
 Universe definition and the first 5k tier-1 companies. Collectors for GitHub/ATS/filings/charges.
@@ -762,8 +764,10 @@ adapter behind the router.
 Gradient-boosted ranker on the phase-1/2 features, trained on the backtest set and the growing
 verification log. Anti-signals wired in as negative features. Per-pack intercepts and slot
 allocation by measured precision (§6.6). Verification queue wired into the internal UI from day one
-of this phase. "Why this lead" explanation generated from evidence facts, not from the LLM's
-imagination.
+of this phase. Quarterly **backcast**: sample the exits where no detector fired, write the why-now
+narrative from post-close sources, classify the miss, and route it to source discovery, the
+hypothesis backlog or calibration (phase 0 doc §9.2). "Why this lead" explanation generated from
+evidence facts, not from the LLM's imagination.
 **Exit:** precision@50 on analyst-verified accounts beats the rule baseline by a measurable margin;
 top decile lift ≥5× base rate within each pack; every shortlisted account has at least two
 independent evidence classes.
@@ -785,16 +789,18 @@ cost per lead.
 
 ## 10. Eval harness (build in phase 0, not phase 4)
 
-Precision, not recall, is the binding constraint. At a 1–3% annual base rate, a 20% precision@50
-already implies roughly a 10× lift; target accordingly and measure against the base rate, not against
-zero.
+Precision, not recall, is the binding constraint at a 1–3% base rate: a 20% precision@50 already
+implies roughly a 10× lift, so target accordingly and measure against the base rate, not against
+zero. Recall is the other half of the P&L: a precise detector that fires on 10% of exits still
+misses the other 90%, so lift and coverage are tracked as separate numbers.
 
 | Metric | Target |
 | --- | --- |
 | Top-decile lift over base rate (backtest) | ≥5× |
 | Precision@50 on analyst-verified accounts | ≥20% |
 | Median lead time, first signal → process start | ≥9 months |
-| Recall of known 2024–25 processes | ≥0.60 |
+| `missed_exit_rate@T−12`, known processes | ≤0.40 (recall ≥0.60) |
+| Misses classified and owned, per quarterly backcast | 100% |
 | Share of shortlisted accounts with ≥2 evidence classes | ≥80% |
 | Extraction field F1 | ≥0.90 on golden set |
 | Entity duplicate rate | <2% |

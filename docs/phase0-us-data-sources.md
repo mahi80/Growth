@@ -33,9 +33,11 @@ If phase 0 fails, we have spent two weeks instead of two quarters.
 | `sources.md` | Source scorecard (§10) filled for every candidate | ≥15 sources scored, ≥8 reachable without payment |
 | `features.parquet` | Per-company features at T−18 / −12 / −6 / −3 | ≥70% of exits have ≥3 feature families at T−12 |
 | `lift.md` | Hazard ratios for H1–H6 with CIs | ≥3 detector families at HR ≥2, CI lower bound >1 |
+| `evals/backcast/YYYY-QN.md` | First missed-exit audit (§9.2) | Every silent exit classified, owned and actioned |
 | `decision.md` | Go/no-go, licensed-source shortlist, pack priority | Signed by whoever owns the P&L |
 
-Everything lands in `evals/phase0/`. Nothing here becomes production code.
+The phase-0 deliverables land in `evals/phase0/`. The backcast series lives in `evals/backcast/` and
+continues after phase 0. Nothing here becomes production code.
 
 ---
 
@@ -262,12 +264,55 @@ HR(detector) = P(detector active at T−12 | exit) / P(detector active at T−12
 - Report median lead time as the first T window at which the detector separates at HR ≥ 2.
 - Recompute base rate over the same window and geography. If the base rate moves, the lift number
   moves with it — quote both.
-- Controls must be alive at T+365, or the comparison is contaminated by deaths that never became
-  deals.
+- Controls are matched on pre-T characteristics and are **not** conditioned on surviving past T;
+  conditioning on T+365 selects on the outcome and biases every ratio. See
+  [pre-code-gaps.md](pre-code-gaps.md) §A1.
 
 Hypotheses under test: H1 bridge round, H2 release cadence, H3 founder/director departure,
 H4 corp-dev or CFO hire, H5 runway <9 months, H6 two or more decay signals simultaneously
 (README §5.5).
+
+### 9.1 Recall, not just lift
+
+```
+missed_exit_rate(w) = exits with no detector active at T−w
+                      / exits with at least one detector-reconstructable feature family at T−w
+```
+
+- Report at T−12 and T−6. A family with HR ≥ 2 can still miss most exits if it is rare; lift and
+  coverage are separate numbers and both belong in `lift.md`.
+- The denominator excludes exits we cannot observe. Including them turns the metric into a coverage
+  measurement and hides detector failures inside missing data.
+- README §10 sets the target at `missed_exit_rate@T−12 ≤ 0.40` for known processes (recall ≥ 0.60).
+  Set the Phase 0 target in `decision.md` after the first audit; do not tune it to the result.
+- Classify every miss, because the four classes have different owners:
+
+| Class | What it means | Action |
+| --- | --- | --- |
+| **Uncaptured** | no source covered the precursor | source registry; `source_discovery` |
+| **Captured, undetected** | the feature exists, no rule fires | hypothesis backlog; backtest before promotion |
+| **Detected, suppressed** | the rule fired but scored below threshold | calibration, not new data |
+| **No observable precursor** | the exit left no public trace at T−w | exclude from the recall target; update the base rate |
+
+### 9.2 Quarterly backcast
+
+The audit above is not a one-off. Run it every quarter, starting at the end of Phase 0.
+
+1. Take the cohort that announced **6–15 months ago**: T−6 is observable and the label has settled.
+   T−12 is reconstructed from the archive; if it cannot be, the exit is classified uncaptured, not
+   dropped.
+2. Select every exit with no detector active at T−12. If there are more than 30, sample 30 plus every
+   exit above the 90th percentile by last round size (or consideration where disclosed).
+3. Write the why-now narrative from post-close sources — 8-K, acquirer statement, press, founder
+   post — before looking at our own features.
+4. Ask what was observable at T−12 **in the archive**, not what exists today. A precursor that was
+   never captured is a data gap, not a detector failure.
+5. Classify each miss with the table in §9.1, assign an owner, and open the action.
+6. Publish `evals/backcast/YYYY-QN.md` with counts, the updated `missed_exit_rate`, and the three
+   largest miss classes; feed them to source discovery, the hypothesis backlog or calibration.
+
+Report the rate; do not chase it to zero. Some exits are genuinely unforecastable, and a team that
+optimises this metric will start fitting noise.
 
 ---
 
@@ -320,7 +365,7 @@ of how interesting it looks.
 | --- | --- |
 | 6 | USPTO, openFDA/ClinicalTrials, FedRAMP; WARN for the 10 largest states |
 | 7 | Compute `features.parquet` at all four windows; log reconstruction decisions |
-| 8 | Lift table for H1–H6; quantify survivorship and label bias |
+| 8 | Lift table for H1–H6; first `missed_exit_rate@T−12` audit with misses classified; quantify survivorship and label bias |
 | 9 | Source scorecard; licence shortlist with indicative pricing |
 | 10 | `decision.md`: go/no-go, pack order, phase-1 source list |
 
@@ -338,6 +383,11 @@ Proceed to phase 1 only if all four hold:
 If two or more fail: rewrite the thesis before writing a crawler. A pipeline built on a signal that
 does not exist is the most expensive possible outcome, and phase 0 is the only cheap place to find
 that out.
+
+Also report `missed_exit_rate@T−12` and the miss-class breakdown from §9.1. It does not block phase 1
+on its own — phase 1 adds sources that may close uncaptured misses — but a rate above the target set
+in `decision.md` makes the detector set incomplete by definition, and the largest miss class becomes a
+phase-1 work item rather than a later surprise.
 
 ---
 
