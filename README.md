@@ -1,4 +1,4 @@
-# Growth — Sell-Side Deal Intelligence for GrowthPal
+# Growth — Sell-Side Deal Intelligence 
 
 A build plan for a company-intelligence engine that surfaces **technical startups preparing to
 sell** — a continuously refreshed company graph, a typed signal layer whose polarity is
