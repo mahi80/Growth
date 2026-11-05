@@ -1,0 +1,266 @@
+{
+  "name": "Growth",
+  "namespace": "https://growthpal.local/onto#",
+  "description": "Sell-side deal intelligence: companies, dependencies, observations, signals and their provenance. Draft seed for GraphBuilder; validate with Ontology.model_validate before importing.",
+  "classes": [
+    {
+      "name": "Thing",
+      "description": "Root of the hierarchy. Named so imported modules (FIBO, schema.org) can attach without a dangling parent."
+    },
+    {
+      "name": "Entity",
+      "parent": "Thing",
+      "description": "Anything with a stable identity and a validity window.",
+      "properties": [
+        { "name": "displayName", "datatype": "string", "required": true, "description": "Human-readable label" },
+        { "name": "reviewState", "datatype": "string", "description": "queued | researching | confirmed | rejected | stale" },
+        { "name": "validFrom", "datatype": "date", "description": "Start of the period this entity is asserted to exist" },
+        { "name": "validTo", "datatype": "date", "description": "End of validity; null means open-ended" }
+      ]
+    },
+    {
+      "name": "Organization",
+      "parent": "Entity",
+      "iri": "https://schema.org/Organization",
+      "description": "A company, investor or other legal body.",
+      "properties": [
+        { "name": "legalName", "datatype": "string" },
+        { "name": "domain", "datatype": "string", "description": "Registrable domain; primary entity-resolution key" },
+        { "name": "hqCity", "datatype": "string" },
+        { "name": "hqCountry", "datatype": "string" },
+        { "name": "foundedYear", "datatype": "integer" },
+        { "name": "headcount", "datatype": "integer" },
+        { "name": "headcountAsOf", "datatype": "date" }
+      ]
+    },
+    {
+      "name": "Company",
+      "parent": "Organization",
+      "description": "A technical startup that can be a sell-side target.",
+      "properties": [
+        { "name": "stage", "datatype": "string", "description": "seed | series_a | series_b | growth | unknown" },
+        { "name": "status", "datatype": "string", "description": "active | in_process | acquired | closed | unknown" },
+        { "name": "lastRoundUsd", "datatype": "integer" },
+        { "name": "lastRoundAt", "datatype": "date" },
+        { "name": "universeTier", "datatype": "integer", "description": "1 deep coverage, 2 monitored, 3 graph only" },
+        { "name": "businessModel", "datatype": "string" },
+        { "name": "endMarket", "datatype": "string" },
+        { "name": "primarySector", "datatype": "string", "description": "Denormalised first sector; full set via operatesIn" }
+      ]
+    },
+    {
+      "name": "Investor",
+      "parent": "Organization",
+      "description": "A fund or strategic investor.",
+      "properties": [
+        { "name": "fundVintage", "datatype": "integer", "description": "Vintage year of the investing fund" },
+        { "name": "investorType", "datatype": "string", "description": "vc | pe | corporate | angel | other" }
+      ]
+    },
+    {
+      "name": "Person",
+      "parent": "Entity",
+      "iri": "https://schema.org/Person",
+      "description": "A natural person in a company role.",
+      "properties": [
+        { "name": "fullName", "datatype": "string", "required": true },
+        { "name": "roleTitle", "datatype": "string" },
+        { "name": "departureDate", "datatype": "date" }
+      ]
+    },
+    {
+      "name": "Sector",
+      "parent": "Entity",
+      "description": "A sector in a named taxonomy.",
+      "properties": [
+        { "name": "sectorName", "datatype": "string", "required": true },
+        { "name": "taxonomy", "datatype": "string" }
+      ]
+    },
+    {
+      "name": "Source",
+      "parent": "Entity",
+      "description": "A registered source with its licence and refresh cadence.",
+      "properties": [
+        { "name": "sourceName", "datatype": "string", "required": true },
+        { "name": "baseUrl", "datatype": "string" },
+        { "name": "licenceClass", "datatype": "string", "description": "open | api | restricted | blocked" },
+        { "name": "refreshCadence", "datatype": "string" },
+        { "name": "lastFetchedAt", "datatype": "date" }
+      ]
+    },
+    {
+      "name": "ExternalIdentifier",
+      "parent": "Entity",
+      "description": "A registry handle: CIK, NMLS, CHPL, FedRAMP, GitHub org.",
+      "properties": [
+        { "name": "idScheme", "datatype": "string", "required": true },
+        { "name": "idValue", "datatype": "string", "required": true },
+        { "name": "issuer", "datatype": "string" }
+      ]
+    },
+    {
+      "name": "Dependency",
+      "parent": "Entity",
+      "description": "Something the company cannot replace; also a contagion edge.",
+      "properties": [
+        { "name": "dependencyType", "datatype": "string", "required": true, "description": "sponsor_bank | payer | ehr_listing | marketplace | cloud_provider | key_customer | oss_component" },
+        { "name": "criticality", "datatype": "float" },
+        { "name": "discoveredVia", "datatype": "string" },
+        { "name": "discoveredAt", "datatype": "date" }
+      ]
+    },
+    {
+      "name": "Permission",
+      "parent": "Entity",
+      "description": "A regulated permission or certification with an expiry clock.",
+      "properties": [
+        { "name": "permissionScheme", "datatype": "string", "required": true },
+        { "name": "permissionStatus", "datatype": "string", "description": "active | surrendered | expired | revoked" },
+        { "name": "expiresAt", "datatype": "date" }
+      ]
+    },
+    {
+      "name": "Licence",
+      "parent": "Permission",
+      "description": "A regulated licence such as an NMLS money-transmitter licence.",
+      "properties": [
+        { "name": "licenceNumber", "datatype": "string" }
+      ]
+    },
+    {
+      "name": "Certification",
+      "parent": "Permission",
+      "description": "A certification such as ONC CHPL or a FedRAMP ATO."
+    },
+    {
+      "name": "Signal",
+      "parent": "Entity",
+      "description": "A derived sell-side indicator with polarity and evidence.",
+      "properties": [
+        { "name": "signalClass", "datatype": "string", "required": true, "description": "deadline | distress | process_leak | explicit_intent | technical_decay" },
+        { "name": "signalType", "datatype": "string", "required": true },
+        { "name": "polarity", "datatype": "integer", "description": "+1 sell-side positive, -1 anti-signal" },
+        { "name": "strength", "datatype": "float" },
+        { "name": "leadTimeDays", "datatype": "integer" },
+        { "name": "verticalPack", "datatype": "string", "description": "generic | fintech_lending | devtools_oss" },
+        { "name": "detectedAt", "datatype": "date" }
+      ]
+    },
+    {
+      "name": "Score",
+      "parent": "Entity",
+      "description": "A versioned ranking output; one row per model version and run.",
+      "properties": [
+        { "name": "modelVersion", "datatype": "string", "required": true },
+        { "name": "propensity", "datatype": "float" },
+        { "name": "dealFit", "datatype": "float" },
+        { "name": "computedAt", "datatype": "date" }
+      ]
+    },
+    {
+      "name": "Transaction",
+      "parent": "Entity",
+      "description": "A dated money event: a round or a deal.",
+      "properties": [
+        { "name": "announcedAt", "datatype": "date" },
+        { "name": "closedAt", "datatype": "date" },
+        { "name": "amountUsd", "datatype": "integer" }
+      ]
+    },
+    {
+      "name": "FundingRound",
+      "parent": "Transaction",
+      "description": "A financing event. Bridge and unpriced rounds are the H1 signal.",
+      "properties": [
+        { "name": "roundType", "datatype": "string", "description": "priced | bridge | safe | convertible" }
+      ]
+    },
+    {
+      "name": "Deal",
+      "parent": "Transaction",
+      "description": "A sell-side process or a completed acquisition.",
+      "properties": [
+        { "name": "dealType", "datatype": "string", "description": "acquisition | acqui_hire | asset_sale | merger | shutdown" },
+        { "name": "processStage", "datatype": "string", "description": "exploring | banker_retained | loi_signed | closed" }
+      ]
+    },
+    {
+      "name": "Observation",
+      "parent": "Entity",
+      "description": "An evidence-bearing observation with its source and extraction method.",
+      "properties": [
+        { "name": "observedAt", "datatype": "date", "required": true, "description": "When the world was like this, not when we saw it" },
+        { "name": "sourceUrl", "datatype": "string" },
+        { "name": "extractionMethod", "datatype": "string" },
+        { "name": "confidence", "datatype": "float" },
+        { "name": "summary", "datatype": "string" }
+      ]
+    },
+    {
+      "name": "Event",
+      "parent": "Observation",
+      "description": "A typed change detected against a company's own baseline.",
+      "properties": [
+        { "name": "eventKind", "datatype": "string", "required": true, "description": "careers_delta | release_cadence | priced_round | bridge_round | director_change | charge_created" }
+      ]
+    },
+    {
+      "name": "Evidence",
+      "parent": "Observation",
+      "description": "A quoted excerpt supporting a signal or assertion.",
+      "properties": [
+        { "name": "quotedText", "datatype": "string" }
+      ]
+    },
+    {
+      "name": "Assertion",
+      "parent": "Observation",
+      "description": "A reified fact row, so EAV provenance survives into RDF.",
+      "properties": [
+        { "name": "assertionField", "datatype": "string", "required": true },
+        { "name": "assertionValue", "datatype": "string", "required": true }
+      ]
+    }
+  ],
+  "relations": [
+    { "name": "hasRound", "domain": "Company", "range": "FundingRound", "view": "temporal", "inverse_of": "roundOf", "description": "Company raised a round" },
+    { "name": "roundOf", "domain": "FundingRound", "range": "Company", "view": "temporal", "inverse_of": "hasRound" },
+    { "name": "hasLeadInvestor", "domain": "FundingRound", "range": "Investor", "view": "entity", "inverse_of": "ledRounds" },
+    { "name": "ledRounds", "domain": "Investor", "range": "FundingRound", "view": "entity", "inverse_of": "hasLeadInvestor" },
+    { "name": "hasEvent", "domain": "Company", "range": "Event", "view": "temporal", "inverse_of": "eventOf", "description": "A detected delta for this company" },
+    { "name": "eventOf", "domain": "Event", "range": "Company", "view": "temporal", "inverse_of": "hasEvent" },
+    { "name": "hasSignal", "domain": "Company", "range": "Signal", "view": "causal", "inverse_of": "signalOf" },
+    { "name": "signalOf", "domain": "Signal", "range": "Company", "view": "causal", "inverse_of": "hasSignal" },
+    { "name": "derivedFrom", "domain": "Signal", "range": "Observation", "view": "causal", "inverse_of": "supportsSignal", "description": "Signal is computed from this observation" },
+    { "name": "supportsSignal", "domain": "Observation", "range": "Signal", "view": "causal", "inverse_of": "derivedFrom" },
+    { "name": "fromSource", "domain": "Observation", "range": "Source", "view": "semantic", "inverse_of": "observes" },
+    { "name": "observes", "domain": "Source", "range": "Observation", "view": "semantic", "inverse_of": "fromSource" },
+    { "name": "assertionAbout", "domain": "Assertion", "range": "Company", "view": "entity", "inverse_of": "hasAssertion" },
+    { "name": "hasAssertion", "domain": "Company", "range": "Assertion", "view": "entity", "inverse_of": "assertionAbout" },
+    { "name": "hasDependency", "domain": "Company", "range": "Dependency", "view": "entity", "inverse_of": "dependencyOf" },
+    { "name": "dependencyOf", "domain": "Dependency", "range": "Company", "view": "entity", "inverse_of": "hasDependency" },
+    { "name": "counterparty", "domain": "Dependency", "range": "Company", "view": "entity", "description": "The company or institution on the other side; drives contagion" },
+    { "name": "hasLicence", "domain": "Company", "range": "Licence", "view": "entity", "inverse_of": "licenceOf" },
+    { "name": "licenceOf", "domain": "Licence", "range": "Company", "view": "entity", "inverse_of": "hasLicence" },
+    { "name": "hasCertification", "domain": "Company", "range": "Certification", "view": "entity", "inverse_of": "certificationOf" },
+    { "name": "certificationOf", "domain": "Certification", "range": "Company", "view": "entity", "inverse_of": "hasCertification" },
+    { "name": "operatesIn", "domain": "Company", "range": "Sector", "view": "semantic", "inverse_of": "hasCompany" },
+    { "name": "hasCompany", "domain": "Sector", "range": "Company", "view": "semantic", "inverse_of": "operatesIn" },
+    { "name": "hasExternalId", "domain": "Company", "range": "ExternalIdentifier", "view": "entity", "inverse_of": "identifies" },
+    { "name": "identifies", "domain": "ExternalIdentifier", "range": "Company", "view": "entity", "inverse_of": "hasExternalId" },
+    { "name": "hasScore", "domain": "Company", "range": "Score", "view": "causal", "inverse_of": "scoreOf" },
+    { "name": "scoreOf", "domain": "Score", "range": "Company", "view": "causal", "inverse_of": "hasScore" },
+    { "name": "hasInvestor", "domain": "Company", "range": "Investor", "view": "entity", "inverse_of": "investsIn" },
+    { "name": "investsIn", "domain": "Investor", "range": "Company", "view": "entity", "inverse_of": "hasInvestor" },
+    { "name": "acquiredBy", "domain": "Company", "range": "Company", "view": "temporal", "inverse_of": "acquired" },
+    { "name": "acquired", "domain": "Company", "range": "Company", "view": "temporal", "inverse_of": "acquiredBy" },
+    { "name": "employs", "domain": "Company", "range": "Person", "view": "temporal", "inverse_of": "employedBy" },
+    { "name": "employedBy", "domain": "Person", "range": "Company", "view": "temporal", "inverse_of": "employs" },
+    { "name": "dealTarget", "domain": "Deal", "range": "Company", "view": "temporal", "inverse_of": "targetIn" },
+    { "name": "targetIn", "domain": "Company", "range": "Deal", "view": "temporal", "inverse_of": "dealTarget" },
+    { "name": "dealAcquirer", "domain": "Deal", "range": "Company", "view": "temporal", "inverse_of": "acquirerIn" },
+    { "name": "acquirerIn", "domain": "Company", "range": "Deal", "view": "temporal", "inverse_of": "dealAcquirer" },
+    { "name": "competesWith", "domain": "Company", "range": "Company", "view": "entity", "description": "Symmetric in practice; inverse omitted because GraphBuilder requires a named inverse" }
+  ]
+}

@@ -288,6 +288,8 @@ coverage(w)                = in-universe exits with a reconstructable feature fa
 
 - `fired` is pre-threshold; `served` applies the ranking and slot budget in force at T−w. Report
   both. A ranker or threshold change must not masquerade as a detector change.
+- If ranker and slot-budget snapshots were not retained, `served` is not computable. Report `fired`
+  alone and label it; do not replay today's ranker as if it were historical.
 - `fired` counts any detector that met its own threshold, right or wrong. It measures event-level
   recall, not attribution; per-detector precision belongs in `lift.md`.
 - The denominator is in-universe exits with at least one reconstructable feature family. Report
