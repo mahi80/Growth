@@ -348,6 +348,10 @@ Two practical notes:
 - **Follow the bankers.** Scrape the transactions pages of 50–200 boutique tech M&A advisors. Each
   announced deal gives you both a label and the pre-deal signal trail. This is the cheapest path to
   fitted feature weights, and it should be a phase-0 task, not a nice-to-have.
+- **People movement is a separate capture problem.** A departure is an absence, and absences need a
+  prior roster; sources split into authoritative filings, curated pages and incidental traces, with
+  very different reliability. Capture design, licences and the skip list:
+  [docs/people-signals.md](docs/people-signals.md).
 
 ### 5.3 Derived features
 
@@ -555,6 +559,9 @@ the counterparty type and the registry.
 
 `partial_exit` is underrated. Servicing-rights transfers, divested product lines and licence
 changes are public, and are the strongest single predictor of a full sale.
+
+`talent_exodus` needs its own capture design — authoritative rosters, licensed workforce data, and
+why single departures are noise: [docs/people-signals.md](docs/people-signals.md).
 
 ### 6.3 What each vertical contributes
 
