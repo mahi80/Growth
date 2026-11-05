@@ -155,6 +155,12 @@ The EXTRACT tier's model strategy — what to reuse from the SLM serving fabric,
 and the split between frontier and fine-tuned extraction — is in
 [docs/infra-extraction-tier.md](docs/infra-extraction-tier.md).
 
+Agents sit **above** this pipeline, not inside it. They own source discovery, collector repair,
+extraction escalation, company investigation and ontology proposals; they write only to staging
+tables, and deterministic workers keep the throughput. Stage ownership, graph state schemas and the
+template → probe → agent cascade are in
+[docs/agent-control-plane.md](docs/agent-control-plane.md).
+
 ---
 
 ## 4. Data model (first cut)
