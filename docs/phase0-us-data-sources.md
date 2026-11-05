@@ -273,7 +273,8 @@ H4 corp-dev or CFO hire, H5 runway <9 months, H6 two or more decay signals simul
 
 ## 10. Source scorecard (fill during week 1)
 
-Score each source on what it actually delivered, not what the docs claim.
+Working sheet: [`evals/phase0/sources.md`](../evals/phase0/sources.md). Score each source on what it
+actually delivered, not what the docs claim.
 
 | Source | Labels covered | Fields usable | Refresh | History depth | ToS risk | Cost | Verdict |
 | --- | --- | --- | --- | --- | --- | --- | --- |

@@ -575,10 +575,15 @@ before it's met.
 ### Phase 0 — Prove the signal before building it (week 1)
 Define the event precisely: `process_started` (banker retained / LOI signed, from GrowthPal's own
 history and banker announcements), with `acquired` and `acqui-hire` as weaker labels. Reconstruct
-a historical set of 200–500 deals from 2019–2025. Compute the §5.5 hypotheses at T−18, T−12, T−6
-and T−3. Write the event definition and label dictionary into `docs/`.
-**Exit:** a lift table showing at least three detector families with ≥2× hazard over base rate, and
-a median lead time above 9 months. If this fails, rewrite the thesis, do not start phase 1.
+300–500 exits from 2019–2025 plus 2,000 matched controls. Compute the §5.5 hypotheses at
+T−18, T−12, T−6 and T−3.
+**Plan, endpoints and week-by-week:** [docs/phase0-us-data-sources.md](docs/phase0-us-data-sources.md)
+(US-only).
+**Working artifacts:** [labels.csv](evals/phase0/labels.csv),
+[sources.md](evals/phase0/sources.md), `features.parquet`, `lift.md`, `decision.md`.
+**Exit:** a lift table showing at least three detector families with ≥2× hazard over base rate, a
+median lead time above 9 months, and ≥70% of exits with three feature families reconstructable at
+T−12. If this fails, rewrite the thesis, do not start phase 1.
 
 ### Phase 1 — 5k companies, done properly (weeks 2–5)
 Universe definition and the first 5k tier-1 companies. Collectors for GitHub/ATS/filings/charges.
@@ -717,6 +722,7 @@ growth/
 │   ├── serve/       # API, briefs, verification queue
 │   └── db/          # models, migrations
 ├── evals/           # golden sets, backtest harness, nightly eval
+│   └── phase0/      # labels.csv, sources.md, lift.md, decision.md
 ├── infra/           # docker-compose, deploy
 └── tests/
 ```
