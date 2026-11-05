@@ -45,9 +45,9 @@ Three consequences for us:
 - **Naming a company as distressed is a legal and reputational surface.** Distress scores stay
   internal, evidence-cited, never published (§8).
 
-### 1.2 What GrowthPal needs out of it
+### 1.2 What X needs out of it
 
-GrowthPal's product line sells off-market M&A targets. For the sell-side motion the lead is a
+X product line sells off-market M&A targets. For the sell-side motion the lead is a
 **technical startup with a credible reason to exit**, found *before* it engages a banker.
 Every priority below is set by "does this shorten the time between a company becoming available
 and a GrowthPal rep being on the phone with it".
