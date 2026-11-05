@@ -13,7 +13,7 @@ A six-minute narrated tour of the plan below: the sell-side inversion, the nine-
 signals and hypotheses that gate them, how people and headcount movement is observed, the validity
 gate, the extraction tier and the agent control plane.
 
-https://github.com/user-attachments/assets/a11a4d45-e953-4b00-a382-9b564c7d52f8
+https://github.com/user-attachments/assets/119661eb-96a8-41a3-b9e4-91ea13f1dce8
 
 ---
 
