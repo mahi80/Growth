@@ -6,6 +6,8 @@ inverted for sell-side intent, and a small model that ranks accounts worth a pho
 
 > **Status:** plan / pre-code. The repo is the working home for this build.
 > **Owner:** @mahi80
+> **Execution roadmap:** [Prioritized engineering backlog](#14-prioritized-engineering-backlog) —
+> status, dependencies, acceptance criteria and the first validation sprint.
 
 ## Walkthrough
 
@@ -891,6 +893,78 @@ The pre-code review lists the decisions below with their blast radius and a week
       store. Revisit Qdrant only on the triggers in [docs/infra-platform.md](docs/infra-platform.md).
 - [ ] Managed Postgres provider and region (RDS / Cloud SQL / Neon) — decide on residency, PITR and
       egress before phase 1.
+
+---
+
+## 14. Prioritized engineering backlog
+
+> **Status:** planned, not implemented. Based on [the pre-code gap review](docs/pre-code-gaps.md).
+> This backlog is the execution gate for the provisional calendar in §9: **do not start Phase 1
+> production coding merely because a calendar week has passed**. Close the Phase 0 decisions and
+> complete the empirical go/no-go review first.
+>
+> **Priority definitions:** P0 = blocking before Phase 0/full cohort assembly; P1 = blocking before
+> Phase 1 implementation; P2 = blocking before customer-facing delivery. Owners below are *roles*,
+> not assigned individuals. Checkboxes represent work still to be completed.
+
+### M0 — Validate product, data rights, and historical signal quality
+
+| ID | Priority | Deliverable and accountable role | Acceptance / exit evidence | Depends on |
+| --- | --- | --- | --- | --- |
+| M0-01 | P0 | **Market + universe + consumer decision** — Founder/Product | `docs/decision.md` chooses US **or** India for v1, buyer vs advisory motion, eligibility and first serving channel; `docs/universe.md` records seeding/coverage rules and exclusions. README and Phase 0 scope reconciled. | — |
+| M0-02 | P0 | **Label ownership and feed rights** — Founder/Legal | `docs/label-rights.md` records permitted collection, training, derived use, retention and resale per source; unapproved data sources marked blocked in `evals/phase0/sources.md`. | M0-01 |
+| M0-03 | P0 | **Sensitive process-inference policy** — Legal/Product | `docs/process-leak-policy.md` defines approved public inputs, restricted claims, escalation and release gates. Briefs state dated observable facts, not unsupported claims of an active confidential process. | M0-01 |
+| M0-04 | P0 | **Customer discovery** — Founder/Commercial | `docs/customer-evidence.md`: 10 structured interviews using 20 mock briefs, target customer workflow, feasible outreach volume, pilot/pricing hypothesis, and an explicit pilot/no-go decision. | M0-01 |
+| M0-05 | P0 | **Point-in-time statistical plan** — Quant/DS | `evals/phase0/analysis-plan.md` freezes eligible cohorts, as-of features, outcome and censoring rules, shutdown/IPO competing outcomes, appropriate risk/hazard estimands, uncertainty, multiplicity and time-based holdout. No future-survival filter on controls. | M0-01 |
+| M0-06 | P0 | **Versioned signal and temporal contracts** — Data Architect/DS | `docs/dictionaries.md` and `docs/temporal-schema.md` define source availability time vs event time, valid-from/to, versioned detectors/units, missingness, precedence and historical reconstruction rules. | M0-05 |
+| M0-07 | P0 | **50-exit archive feasibility spike** — Data/Quant | `evals/phase0/feasibility.md` gives evidence URLs, archive-only reconstructability at T−12, three pre-registered signal families, missing-source rate, cost, failure examples and proceed/pivot/stop decision. Test the provisional 60% coverage threshold without changing it after results are seen. | M0-02, M0-05, M0-06 |
+| M0-08 | P0 | **Full historical validation + signed go/no-go** — Quant/Founder | Where feasible, a 300–500-exit and ~2,000-control as-of cohort, uncertainty-aware results and missed-event analysis. `evals/phase0/decision.md` records calibrated estimates, coverage, failures, permitted sources, customer evidence and explicit Phase 1 authorization. | M0-03, M0-04, M0-07 |
+
+**M0 exit:** empirically usable and licensable signals, a defensible historical evaluation protocol,
+a defined buyer and country, and a written go/no-go. The 50-exit feasibility spike is an initial
+3-day experiment *after its prerequisites*; a complete retrospective dataset may need 4–6 weeks or
+longer and must not be promised as a one-week deliverable.
+
+### M1 — Build a deterministic, auditable core
+
+| ID | Priority | Deliverable and accountable role | Acceptance / exit evidence | Depends on |
+| --- | --- | --- | --- | --- |
+| M1-01 | P1 | **Collector/source contracts** — Data Engineering | Contract per source: endpoint, rights, auth, rate/daily budget, fixture, schema, point-in-time snapshot, expected yield, failure semantics, owner, kill switch. | M0-02, M0-08 |
+| M1-02 | P1 | **Temporal Postgres schema + provenance** — Backend/Data | Versioned migrations for company/universe state, facts, events (`occurred_at` and availability timestamps), dependencies and immutable evidence spans; reproduce a historical brief using retained records. | M0-06, M0-08 |
+| M1-03 | P1 | **Entity-resolution gold set** — Data/DS | 500 labelled pairs (merge/non-merge/ambiguous), measured precision and recall by rule, review queue, reversible merges and alias history. | M1-02 |
+| M1-04 | P1 | **Ingest → delta → extraction → evidence validator** — Data/ML | Two or three permitted collectors, idempotent jobs, section-delta tests, schema-validated extraction, quote-offset/content-hash grounding, and quarantining of uncertain outputs. | M1-01, M1-02 |
+| M1-05 | P1 | **Evaluation harness and control sampling** — DS/ML Platform | Frozen temporal holdout, feature snapshot hashes, extraction F1, source/segment coverage, precision@25/50/100/300, matched-cohort 6/12/18-month outcomes and monthly random non-shortlist sample. | M0-05, M1-02 |
+| M1-06 | P1 | **Bounded LangGraph control plane** — AI Engineering | First implement `source_discovery` and `collector_repair`; Postgres checkpoints, explicit token/tool budgets, source allowlist, staged proposals, approvals and per-graph evals. **Agents are not bulk crawlers.** | M1-01, M1-04, M1-05 |
+| M1-07 | P1 | **Security, operational limits and observability** — Platform/Security | Secrets out of Git, least privilege, PII-safe logs, per-source cost caps, source-staleness alerts, traces, backup/restore and replay drill. | M1-01, M1-02 |
+
+**M1 exit:** one end-to-end replayable vertical slice, historical as-of correctness, grounded facts,
+a passing regression suite and an auditable operator workflow. Avoid adding Neo4j, OpenSearch,
+distributed orchestration or A2A until a measured requirement justifies them.
+
+### M2 — Deliver evidence-backed intelligence and close the feedback loop
+
+| ID | Priority | Deliverable and accountable role | Acceptance / exit evidence | Depends on |
+| --- | --- | --- | --- | --- |
+| M2-01 | P2 | **Why-now briefs + analyst verification** — Product/Backend | Briefs with independent supporting evidence, timestamps and confidence; reviewer can accept/reject/edit and reproduce the cited claim after the original page changes. | M1-02, M1-04, M1-07 |
+| M2-02 | P2 | **Ranking, calibration and customer capacity** — DS/Product | Rule baseline first; ranker only if it beats baseline on held-out cohorts. Report precision@K, outcome rates and calibration by segment. Limit allocations to actual customer capacity rather than assuming 300 sellers/week. | M1-05, M2-01 |
+| M2-03 | P2 | **Pilot distribution, permissions and commercial measurement** — Commercial/Platform | Access-controlled weekly brief/CSV/CRM delivery, customer allocation rules, audit trail, customer feedback and time-to-contact/mandate metrics. | M0-04, M0-03, M2-01 |
+| M2-04 | P2 | **Expand agents or integrate external partners only on demand** — AI Engineering | Add `extraction_escalation`, `company_investigation`, `ontology_proposal` in that order, each with separate evals. Use A2A **only** where independently deployed partner agents require a standard interface; keep local graph calls in LangGraph. | M1-06, M2-01 |
+
+**M2 exit:** permissioned briefs that customers can act on, measured incremental value against a
+baseline, an explicit review workflow and a documented decision about expanding coverage.
+
+### First execution sprint — recommended work order
+
+- [ ] **Decision track:** M0-01 (jurisdiction, recipient and v1 delivery) plus M0-02/M0-03
+      (data rights and sensitive-inference policy).
+- [ ] **Measurement track:** M0-05/M0-06 (pre-registered methodology and frozen definitions).
+- [ ] **Commercial track:** begin M0-04 (buyer interviews and mock briefs) in parallel.
+- [ ] **Feasibility track:** run M0-07 only with approved sources and frozen evaluation rules.
+- [ ] **Review:** record the result in M0-08; authorize the full backtest, pivot, or stop.
+
+**Decision rule:** A high-looking model score is not sufficient. The next phase requires usable
+*historically observable* features, lawful data use, defensible statistical lift, and a buyer with
+the capacity and reason to act.
 
 ---
 
