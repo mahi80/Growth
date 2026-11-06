@@ -968,6 +968,66 @@ the capacity and reason to act.
 
 ---
 
+## 15. Deep review — additional failure modes and hard tests
+
+> **Status:** open risk register, **not** a claim that any detector or model has passed validation.
+> This second-pass review supplements §14 and [the pre-code review](docs/pre-code-gaps.md);
+> it concentrates on things a well-architected system can still get fundamentally wrong.
+> **Do not interpret a checked box in the engineering plan as measured evidence.**
+
+### 15.1 The outcome and statistical contract can still invalidate the product
+
+| ID | Priority | Missing or under-specified risk | Concrete requirement / acceptance test |
+| --- | --- | --- | --- |
+| DR-01 | **P0** | **Wrong target:** a completed acquisition is observable, but a founder's willingness to sell or a private advisory mandate usually is not. Mixing `process_started`, `acquired`, `acqui_hire`, `asset_sale`, and `shutdown` into one positive label trains a different product from the one described in §1. | Publish `docs/outcome-taxonomy.md`: distinct outcomes, event onset vs announcement vs close, source of proof, censoring and 6/12/18-month horizons. Report each target separately. Treat acquisition as an explicitly-labelled proxy for *actionable pre-process intent*, never as equivalent ground truth. |
+| DR-02 | **P0** | **Positive–unlabelled and delayed outcomes:** a company with no public sale record is not necessarily a true negative; small/private deals and aborted processes are especially under-ascertained. Short follow-up makes recent controls look artificially safe. | Freeze observation cutoff and outcome-maturity window; record `unknown`, `no public outcome`, `censored`, `cancelled` distinctly. Measure discovery coverage across independently sourced deal lists by size/sector and use sensitivity analyses for missing positives. |
+| DR-03 | **P0** | **Publication-time leakage:** `occurred_at` and `observed_at` alone cannot establish what was knowable when a lead would have been scored. Later-enriched feeds, archives, amended filings, present-day aliases, and post-event company profiles can backfill future knowledge. | For every input track at minimum `event_time`, `source_published_at`, `first_available_at` (when demonstrable), `fetched_at`, snapshot/version and rights. Explicitly distinguish **retrospectively reconstructable** from **actually available to the system then**. Automated test: no feature uses an unavailable or post-cutoff revision. |
+| DR-04 | **P0** | **One-sided exit theory:** "new funding", "product launch" and "hiring growth" are coded as sell-side anti-signals, yet strategic acquisitions can follow growth. A distress-first detector could miss healthy but attractive acquisition targets. | Separate *strategic exit*, *distressed sale*, *acqui-hire* and *founder/liquidity* hypotheses. Test signal polarity by exit type and company stage; no universal negative weight or hard suppression without out-of-time evidence. Report calibration and capture separately for each cohort. |
+| DR-05 | **P0** | **False historical lift:** the Phase 0 materials still mix matched case/control ratios, hazard ratios, future-survival control filters, and multiple testing. Company histories, investor networks, follow-up length and a limited number of private exits further weaken naive confidence intervals. | Freeze a landmark or time-to-event estimand before labels; use appropriate competing-risk/censoring handling, company-clustered uncertainty, pre-registered tests, temporal holdouts and a genuinely untouched final test cohort. Report *risk ratio* when computing a risk ratio; do not label it HR. Include negative-control features and size/stage/sector slices. |
+
+**Practical note:** [Phase 0 source doc](docs/phase0-us-data-sources.md) §3 currently requires controls alive at `T+365`, while §9 explicitly says **not** to condition controls on surviving past T. §9 also calls a detector-prevalence ratio `HR` and suggests Wilson intervals without specifying the interval for that ratio. Those are **contradictions to correct in the source document**, not merely items to discuss. The README's one-week Phase 0 and "India first" framing also conflict with the US-only Phase 0 doc and the longer feasibility/backtest schedule. M0-01 and M0-05 must reconcile these texts before implementation.
+
+### 15.2 The system can be operationally correct and still fail
+
+| ID | Priority | Missing or under-specified risk | Concrete requirement / acceptance test |
+| --- | --- | --- | --- |
+| DR-06 | **P1** | **Polling economics are understated:** even when HTML is unchanged, detecting that it is unchanged requires a request, conditional response or event feed. Costs are driven by total polls, JS rendering, proxy bytes, errors and retries—not only changed-page extractions. | Model `companies × sources × cadence × requests × render_rate`. Record cost per covered company/month and per verified lead, HTTP 200/304 proportions, last successful observation, analyst minutes, and delayed-source coverage. Run a measured 100–500-company polling pilot before extrapolating to 50k. |
+| DR-07 | **P1** | **Human approval bottleneck:** §3's blanket agent-proposal → human approval rule may not scale to thousands of source discoveries and repair proposals. | Define a risk-tiered promotion matrix: deterministic/low-risk changes may be automatically promoted **only** under approved validation policy; ambiguous identity merges, schema changes, access exceptions, high-impact claims and outward communications require explicit review. Test approval volume, p95 age and backlog against operator capacity; fail closed when thresholds are exceeded. |
+| DR-08 | **P1** | **Web data are attacker-controlled:** the current quote/offset validator detects absent strings, not fabricated attribution, outdated claims, false company matches or prompt injection embedded in pages and PDFs. | Check quote **entailment and subject attribution**, source independence, entity identity, freshness and contradiction handling. Keep instructions in retrieved content untrusted; enforce tool allowlists and permissions in code. Add adversarial fixtures for poisoned ATS pages, false acquisition posts, hostile PDFs and fabricated data-room signals; verify no tool privilege escalation. |
+| DR-09 | **P1** | **Replay and effect duplication:** a Postgres LangGraph checkpointer protects state but does not make external API calls, PR creation, e-mails or staging mutations exactly-once. Retries and interrupts can repeat side effects. | Put side effects behind idempotent tasks/nodes; use deterministic keys, an outbox/transactional promotion boundary and replay tests that crash before/after writes and interrupts. Verify one and only one business effect after retry, even if the graph node executes more than once. |
+| DR-10 | **P1** | **Graph contagion amplifies spurious correlations:** cyclic, stale or weak counterparty edges can multiply the same upstream event across companies, making the "independent evidence classes" condition illusory. | Version graph edges with validity intervals and confidence. Bound propagation by hop and contributing event ID, de-duplicate shared causes, compare with/without graph propagation on holdout cohorts, and forbid self-reinforcing cycles. A company-level brief must distinguish direct from inherited signals. |
+| DR-11 | **P1** | **Revisions, retractions and merges:** append-only facts help auditability but an incorrect extracted event, later-retracted claim or bad company merge must be reversibly invalidated across signals and prior brief versions. | Add supersession/retraction records, conflict lineage, reversible merge history and a dependency invalidation queue. Test that retracting one bad fact recomputes impacted scores, suppresses invalid briefs and preserves a traceable audit snapshot without presenting the withdrawn claim as current. |
+| DR-12 | **P2** | **Prediction is not commercial usefulness:** lift on eventual acquisition is not the same as winning a mandate, reaching the right buyer, avoiding a known-in-process target or generating fee revenue. A model can rank already-obvious deals accurately and deliver no advantage. | Pilot against a date-matched rule/manual-research baseline with immutable allocation, cost and capacity limits. Track **incremental actionable leads, verified early discovery, meeting→mandate conversion, time-to-contact, fee opportunity and false-assertion rate**. Do not optimize the ranker solely for `P(exit)`. |
+
+**Reference controls:** [OWASP prompt-injection guidance](https://genai.owasp.org/llmrisk/llm01-prompt-injection/) and [LangGraph durable execution/idempotency guidance](https://docs.langchain.com/oss/python/langgraph/durable-execution/). Risk tiers and tests above are proposed Growth controls, not guarantees from these libraries.
+
+### 15.3 Explicit gates before introducing more agent complexity
+
+- [ ] **First prove the labels:** resolve DR-01/02/03/05 and M0-01/02/05; the present `evals/phase0/labels.csv` contains only its header and the source scorecard has no observed-coverage measurements.
+- [ ] **First prove the detectors:** compare rules to a calendar/sector/stage baseline, test DR-04 (healthy strategic acquirers), show confidence intervals and sensitivity to missing outcomes; keep the final cohort unseen until selection is frozen.
+- [ ] **First prove the unit economics:** collect actual poll/render/review measurements (DR-06) and capacity-matched pilot outcomes (DR-12); don't infer scale economics from changed documents alone.
+- [ ] **First prove the security and replay boundary:** poisoned-source tests, source-level provenance checks, approval load test, intentional crash-and-resume tests, correction/retraction test (DR-07–11).
+- [ ] **Only then consider extra protocols:** LangGraph remains the internal control plane; use A2A only for independently deployed agents with separate ownership, identity, task lifecycle and authorization requirements. It will not improve detector precision or historical validity by itself.
+
+### 15.4 What the first executable slice should demonstrate
+
+Take **one jurisdiction, one vertical, 100–500 companies, two to three licensed/approved sources,
+and one historically reconstructable prediction horizon**. Demonstrate:
+
+1. A source record and raw evidence snapshot with provenance, publication and fetch timestamps.
+2. A correct as-of historical feature row, including explicit unavailable/unknown state.
+3. A rule-driven signal and evidence brief that can be replayed or retracted.
+4. A controlled LangGraph exception path with bounded tools, idempotent proposals and an actual approval SLA.
+5. A score and precision-at-capacity comparison against a simple, time-matched baseline.
+6. Measured per-company polling cost, operator-review load and legal/rights clearance.
+
+**Go/no-go:** if source timestamps, historical coverage, commercial applicability or operator
+capacity cannot be demonstrated at this scale, change the product hypothesis or collection strategy
+before expanding coverage. A2A, a larger model, an ontology server or more agent graphs cannot fix
+an unobservable target or leaked labels.
+
+---
+
 ## Repo layout (proposed)
 
 ```
